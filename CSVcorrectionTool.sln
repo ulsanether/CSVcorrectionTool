@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35825.156 d17.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSVcorrectionTool", "CSVcorrectionTool\CSVcorrectionTool.csproj", "{30634924-BE61-4A08-B019-8D376B4346D0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestCSVcorrectionTool", "TestCSVcorrectionTool\TestCSVcorrectionTool.csproj", "{F5B09271-983F-4299-B53D-59E7FFE59F79}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{30634924-BE61-4A08-B019-8D376B4346D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30634924-BE61-4A08-B019-8D376B4346D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30634924-BE61-4A08-B019-8D376B4346D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30634924-BE61-4A08-B019-8D376B4346D0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F5B09271-983F-4299-B53D-59E7FFE59F79}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F5B09271-983F-4299-B53D-59E7FFE59F79}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F5B09271-983F-4299-B53D-59E7FFE59F79}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F5B09271-983F-4299-B53D-59E7FFE59F79}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EA850D94-9E90-41EC-87B0-016085A6E83C}
+	EndGlobalSection
+EndGlobal
