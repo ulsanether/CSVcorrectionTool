@@ -258,21 +258,33 @@ namespace CSVcorrectionTool.View
 
         private void RenderPoints()
         {
-            Console.WriteLine($"=== RenderPoints 호출 ===");
-            Console.WriteLine($"Points is null: {Points == null}");
-            Console.WriteLine($"Points Count: {Points?.Count ?? 0}");
 
             pointsModelGroup.Children.Clear();
-            Console.WriteLine("pointsModelGroup 클리어 완료");
 
             if (Points == null || Points.Count == 0)
             {
-                Console.WriteLine("Points가 비어있음 - 테스트 구체 생성");
                 var testSphere = CreateSphere(new Point3D(0, 0, 0), 5);
                 pointsModelGroup.Children.Add(testSphere);
-                Console.WriteLine("테스트 구체 추가 완료");
                 return;
             }
+
+
+            if(Points.Count > 1)  //선 굵기 더 굵게 하기 
+            {
+                for (int i = 0; i < Points.Count - 1; i++)
+                {
+                    var p1 = Points[i];
+                    var p2 = Points[i + 1];
+                    var start = new Point3D(p1.X, p1.Y, p1.Z);
+                    var end = new Point3D(p2.X, p2.Y, p2.Z);
+                    var line = CreateLine(start, end, Colors.Red);
+                    
+                    pointsModelGroup.Children.Add(line);
+                }
+
+
+            }
+
 
             double minX = Points.Min(p => p.X);
             double maxX = Points.Max(p => p.X);
