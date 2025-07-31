@@ -15,6 +15,28 @@ namespace CSVcorrectionTool.View
 {
     public partial class ViewPort3DView : UserControl
     {
+
+        public static readonly DependencyProperty LineThicknessProperty =
+    DependencyProperty.Register(
+        nameof(LineThickness),
+        typeof(double),
+        typeof(ViewPort3DView),
+        new PropertyMetadata(0.5, OnLineThicknessChanged));
+
+        public double LineThickness
+        {
+            get => (double)GetValue(LineThicknessProperty);
+            set => SetValue(LineThicknessProperty, value);
+        }
+
+        private static void OnLineThicknessChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var control = (ViewPort3DView)d;
+            control.RenderPoints();
+        }
+
+
+
         public static readonly DependencyProperty PointsProperty =
             DependencyProperty.Register(
                 nameof(Points),
@@ -90,7 +112,7 @@ namespace CSVcorrectionTool.View
             this.MouseMove += Viewport_MouseMove;
             this.MouseWheel += Viewport_MouseWheel;
 
-            // Viewport에도 이벤트 등록 (이중 보장)
+           
             viewport.MouseDown += Viewport_MouseDown;
             viewport.MouseUp += Viewport_MouseUp;
             viewport.MouseMove += Viewport_MouseMove;
@@ -102,9 +124,12 @@ namespace CSVcorrectionTool.View
             this.Focusable = true;
             viewport.Focusable = true;
         }
+
+        #region 마우스관련 함수
+
         private void Viewport_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            // 포커스 설정
+
             this.Focus();
 
             _lastMousePosition = e.GetPosition(this);
@@ -159,6 +184,13 @@ namespace CSVcorrectionTool.View
             UpdateCameraPosition();
             e.Handled = true;
         }
+
+        #endregion
+
+
+   
+
+
 
         private void RotateCamera(double deltaTheta, double deltaPhi)
         {
@@ -227,10 +259,11 @@ namespace CSVcorrectionTool.View
             axisModelGroup.Children.Add(zAxis);
         }
 
+       
         private GeometryModel3D CreateLine(Point3D start, Point3D end, System.Windows.Media.Color color)
         {
             var mesh = new MeshGeometry3D();
-            var thickness = 0.5;
+            var thickness = LineThickness;
 
             var direction = end - start;
             direction.Normalize();
@@ -242,10 +275,10 @@ namespace CSVcorrectionTool.View
             perpendicular *= thickness;
 
             var positions = new Point3DCollection
-            {
-                start + perpendicular, start - perpendicular,
-                end + perpendicular, end - perpendicular
-            };
+    {
+        start + perpendicular, start - perpendicular,
+        end + perpendicular, end - perpendicular
+    };
 
             var triangleIndices = new Int32Collection { 0, 1, 2, 1, 3, 2 };
 
@@ -253,8 +286,12 @@ namespace CSVcorrectionTool.View
             mesh.TriangleIndices = triangleIndices;
 
             var material = new DiffuseMaterial(new SolidColorBrush(color));
-            return new GeometryModel3D(mesh, material);
+            var model = new GeometryModel3D(mesh, material);
+            // 반대 방향에서도 보이도록 BackMaterial도 지정
+            model.BackMaterial = material;
+            return model;
         }
+
 
         private void RenderPoints()
         {
@@ -269,22 +306,21 @@ namespace CSVcorrectionTool.View
             }
 
 
-            if(Points.Count > 1)  //선 굵기 더 굵게 하기 
+            if (Points.Count > 1)
             {
                 for (int i = 0; i < Points.Count - 1; i++)
                 {
                     var p1 = Points[i];
                     var p2 = Points[i + 1];
+
+       
                     var start = new Point3D(p1.X, p1.Y, p1.Z);
                     var end = new Point3D(p2.X, p2.Y, p2.Z);
                     var line = CreateLine(start, end, Colors.Red);
-                    
+
                     pointsModelGroup.Children.Add(line);
                 }
-
-
             }
-
 
             double minX = Points.Min(p => p.X);
             double maxX = Points.Max(p => p.X);
@@ -298,22 +334,19 @@ namespace CSVcorrectionTool.View
             double centerZ = (minZ + maxZ) / 2.0;
             double maxRange = Math.Max(maxX - minX, Math.Max(maxY - minY, maxZ - minZ));
 
-            Console.WriteLine($"데이터 범위: X({minX:F2}~{maxX:F2}), Y({minY:F2}~{maxY:F2}), Z({minZ:F2}~{maxZ:F2})");
-            Console.WriteLine($"중심점: ({centerX:F2}, {centerY:F2}, {centerZ:F2}), 최대범위: {maxRange:F2}");
-
+ 
             _lookAtPoint = new Point3D(centerX, centerY, centerZ);
             _cameraDistance = Math.Max(maxRange * 1.5, 100);
             var cameraOffset = _cameraDistance / Math.Sqrt(3);
             camera.Position = new Point3D(centerX + cameraOffset, centerY + cameraOffset, centerZ + cameraOffset);
             camera.LookDirection = _lookAtPoint - camera.Position;
 
-            Console.WriteLine($"카메라 위치: ({camera.Position.X:F2}, {camera.Position.Y:F2}, {camera.Position.Z:F2})");
-
+       
             double sphereRadius = Math.Max(maxRange * 0.01, 1.0);
             if (Points.Count > 100) sphereRadius *= 0.5;
             else if (Points.Count > 50) sphereRadius *= 0.7;
 
-            Console.WriteLine($"구체 반지름: {sphereRadius:F2}");
+       
 
             int addedCount = 0;
             foreach (var point in Points)
@@ -339,8 +372,7 @@ namespace CSVcorrectionTool.View
                 addedCount++;
             }
 
-            Console.WriteLine($"총 {addedCount}개의 구체를 pointsModelGroup에 추가 완료");
-            Console.WriteLine($"pointsModelGroup.Children.Count: {pointsModelGroup.Children.Count}");
+
         }
 
         private enum Axis { X, Y, Z }
@@ -360,6 +392,10 @@ namespace CSVcorrectionTool.View
                     return new Vector3D(length, 0, 0);
             }
         }
+
+
+
+
 
         private GeometryModel3D CreateSphere(Point3D center, double radius)
         {

@@ -13,12 +13,6 @@ namespace CSVcorrectionTool.ViewModels
     class CSVOpenViewModel :ViewModelBase
     {
 
-      
-
-
-
-
-
 
 
     }

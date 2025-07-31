@@ -14,7 +14,6 @@ namespace CSVcorrectionTool
         {
             InitializeComponent();
 
-
             var csvService = new CSVService();
             var viewModel = new MainViewModel(csvService);
 

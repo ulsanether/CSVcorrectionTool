@@ -12,6 +12,7 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="CsvHelper" Version="33.1.0" />
     <PackageReference Include="devexpress.wpf.controls" Version="24.1.6-pre-24252" />
+    <PackageReference Include="MaterialDesignThemes" Version="5.2.1" />
   </ItemGroup>
 
   <ItemGroup>
