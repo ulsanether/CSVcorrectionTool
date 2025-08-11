@@ -8,7 +8,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:view="clr-namespace:CSVcorrectionTool.View"
     xmlns:viewmodels="clr-namespace:CSVcorrectionTool.ViewModels"
-    Title="CSV 보정 도구"
+    Title="CSV 보정 도구 08_11"
     Width="800"
     Height="450"
     d:DataContext="{d:DesignInstance Type=viewmodels:MainViewModel}"
@@ -104,7 +104,8 @@
             </StackPanel>
             <StackPanel
                 Height="50"
-                VerticalAlignment="Bottom"
+                Margin="0,330,0,0"
+                VerticalAlignment="Center"
                 d:LayoutOverrides="Width">
                 <TextBox
                     x:Name="zDegreeTextBox"
