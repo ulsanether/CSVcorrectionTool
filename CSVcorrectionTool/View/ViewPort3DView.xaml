@@ -8,41 +8,43 @@
     d:DesignHeight="450"
     d:DesignWidth="800"
     mc:Ignorable="d">
-    <Viewport3D x:Name="viewport" ClipToBounds="True">
-        <!--  카메라 설정  -->
-        <Viewport3D.Camera>
-            <PerspectiveCamera
-                x:Name="camera"
-                FieldOfView="45"
-                LookDirection="-1,-1,-1"
-                Position="100,100,100"
-                UpDirection="0,0,1" />
-        </Viewport3D.Camera>
 
-        <!--  조명 설정 - 여러 방향에서 조명  -->
-        <ModelVisual3D>
-            <ModelVisual3D.Content>
-                <Model3DGroup>
-                    <AmbientLight Color="#404040" />
-                    <DirectionalLight Direction="-1,-1,-1" Color="White" />
-                    <DirectionalLight Direction="1,1,1" Color="#808080" />
-                </Model3DGroup>
-            </ModelVisual3D.Content>
-        </ModelVisual3D>
+    <Grid>
+        <Viewport3D x:Name="viewport" ClipToBounds="True">
+            <!-- 카메라 설정 -->
+            <Viewport3D.Camera>
+                <PerspectiveCamera
+                    x:Name="camera"
+                    FieldOfView="45"
+                    Position="100,100,100"
+                    LookDirection="-1,-1,-1"
+                    UpDirection="0,0,1" />
+            </Viewport3D.Camera>
 
-        <!--  좌표축 표시  -->
-        <ModelVisual3D>
-            <ModelVisual3D.Content>
-                <Model3DGroup x:Name="axisModelGroup" />
-            </ModelVisual3D.Content>
-        </ModelVisual3D>
+            <!-- 조명 설정 -->
+            <ModelVisual3D>
+                <ModelVisual3D.Content>
+                    <Model3DGroup>
+                        <AmbientLight Color="#404040" />
+                        <DirectionalLight Direction="-1,-1,-1" Color="White" />
+                        <DirectionalLight Direction="1,1,1" Color="#808080" />
+                    </Model3DGroup>
+                </ModelVisual3D.Content>
+            </ModelVisual3D>
 
-        <!--  포인트들을 표시할 모델 그룹  -->
-        <ModelVisual3D>
-            <ModelVisual3D.Content>
-                <Model3DGroup x:Name="pointsModelGroup" />
-            </ModelVisual3D.Content>
-        </ModelVisual3D>
-    </Viewport3D>
+            <!-- 좌표축 표시 -->
+            <ModelVisual3D>
+                <ModelVisual3D.Content>
+                    <Model3DGroup x:Name="axisModelGroup" />
+                </ModelVisual3D.Content>
+            </ModelVisual3D>
+
+            <!-- 포인트 및 벡터 표시 -->
+            <ModelVisual3D>
+                <ModelVisual3D.Content>
+                    <Model3DGroup x:Name="pointsModelGroup" />
+                </ModelVisual3D.Content>
+            </ModelVisual3D>
+        </Viewport3D>
+    </Grid>
 </UserControl>
-

@@ -8,20 +8,19 @@ using System.Windows.Media.Media3D;
 
 using CSVcorrectionTool.Models;
 
-using MessageBox = System.Windows.MessageBox;
+using Color = System.Windows.Media.Color;
 using UserControl = System.Windows.Controls.UserControl;
 
 namespace CSVcorrectionTool.View
 {
     public partial class ViewPort3DView : UserControl
     {
-
         public static readonly DependencyProperty LineThicknessProperty =
-    DependencyProperty.Register(
-        nameof(LineThickness),
-        typeof(double),
-        typeof(ViewPort3DView),
-        new PropertyMetadata(0.5, OnLineThicknessChanged));
+            DependencyProperty.Register(
+                nameof(LineThickness),
+                typeof(double),
+                typeof(ViewPort3DView),
+                new PropertyMetadata(0.5, OnLineThicknessChanged));
 
         public double LineThickness
         {
@@ -34,8 +33,6 @@ namespace CSVcorrectionTool.View
             var control = (ViewPort3DView)d;
             control.RenderPoints();
         }
-
-
 
         public static readonly DependencyProperty PointsProperty =
             DependencyProperty.Register(
@@ -52,49 +49,29 @@ namespace CSVcorrectionTool.View
 
         private static void OnPointsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            Console.WriteLine("=== OnPointsChanged 호출됨 ===");
-
             var control = (ViewPort3DView)d;
 
-            // 이전 컬렉션 이벤트 해제
             if (e.OldValue is ObservableCollection<CSVPointModel> oldCollection)
-            {
                 oldCollection.CollectionChanged -= control.Points_CollectionChanged;
-            }
 
-            // 새 컬렉션 이벤트 구독
             if (e.NewValue is ObservableCollection<CSVPointModel> newCollection)
-            {
                 newCollection.CollectionChanged += control.Points_CollectionChanged;
-                Console.WriteLine($"새 컬렉션 구독 완료. Count: {newCollection.Count}");
-            }
 
             control.RenderPoints();
         }
 
         private void Points_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            Console.WriteLine($"=== Points_CollectionChanged 호출됨 ===");
-            Console.WriteLine($"Action: {e.Action}");
-            Console.WriteLine($"현재 Points Count: {Points?.Count ?? 0}");
-
-            // UI 스레드에서 실행되도록 보장
             if (Dispatcher.CheckAccess())
-            {
                 RenderPoints();
-            }
             else
-            {
                 Dispatcher.Invoke(() => RenderPoints());
-            }
         }
 
         private bool _isRotating = false;
         private bool _isPanning = false;
         private System.Windows.Point _lastMousePosition;
-        private Point3D _cameraPosition;
         private Point3D _lookAtPoint = new Point3D(0, 0, 0);
-        private Vector3D _lookDirection;
         private double _cameraDistance = 500;
 
         public ViewPort3DView()
@@ -106,21 +83,17 @@ namespace CSVcorrectionTool.View
 
         private void InitializeMouseControls()
         {
-         
             this.MouseDown += Viewport_MouseDown;
             this.MouseUp += Viewport_MouseUp;
             this.MouseMove += Viewport_MouseMove;
             this.MouseWheel += Viewport_MouseWheel;
 
-           
             viewport.MouseDown += Viewport_MouseDown;
             viewport.MouseUp += Viewport_MouseUp;
             viewport.MouseMove += Viewport_MouseMove;
             viewport.MouseWheel += Viewport_MouseWheel;
 
-   
             this.Background = System.Windows.Media.Brushes.Transparent;
-     
             this.Focusable = true;
             viewport.Focusable = true;
         }
@@ -129,9 +102,7 @@ namespace CSVcorrectionTool.View
 
         private void Viewport_MouseDown(object sender, MouseButtonEventArgs e)
         {
-
             this.Focus();
-
             _lastMousePosition = e.GetPosition(this);
 
             if (e.LeftButton == MouseButtonState.Pressed)
@@ -165,13 +136,9 @@ namespace CSVcorrectionTool.View
             var deltaY = currentPosition.Y - _lastMousePosition.Y;
 
             if (_isRotating)
-            {
                 RotateCamera(deltaX * 0.01, deltaY * 0.01);
-            }
             else if (_isPanning)
-            {
                 PanCamera(deltaX, deltaY);
-            }
 
             _lastMousePosition = currentPosition;
             e.Handled = true;
@@ -186,11 +153,6 @@ namespace CSVcorrectionTool.View
         }
 
         #endregion
-
-
-   
-
-
 
         private void RotateCamera(double deltaTheta, double deltaPhi)
         {
@@ -249,21 +211,115 @@ namespace CSVcorrectionTool.View
 
         private void CreateAxis()
         {
-            var xAxis = CreateLine(new Point3D(0, 0, 0), new Point3D(50, 0, 0), Colors.Red);
-            axisModelGroup.Children.Add(xAxis);
-
-            var yAxis = CreateLine(new Point3D(0, 0, 0), new Point3D(0, 50, 0), Colors.Green);
-            axisModelGroup.Children.Add(yAxis);
-
-            var zAxis = CreateLine(new Point3D(0, 0, 0), new Point3D(0, 0, 50), Colors.Blue);
-            axisModelGroup.Children.Add(zAxis);
+            axisModelGroup.Children.Add(CreateLine(new Point3D(0, 0, 0), new Point3D(50, 0, 0), Colors.Red));   // X축 (빨강)
+            axisModelGroup.Children.Add(CreateLine(new Point3D(0, 0, 0), new Point3D(0, 50, 0), Colors.Green)); // Y축 (초록)
+            axisModelGroup.Children.Add(CreateLine(new Point3D(0, 0, 0), new Point3D(0, 0, 50), Colors.Blue));  // Z축 (파랑)
         }
 
-       
-        private GeometryModel3D CreateLine(Point3D start, Point3D end, System.Windows.Media.Color color)
+
+        private GeometryModel3D CreateLine(Point3D start, Point3D end, Color color)
         {
             var mesh = new MeshGeometry3D();
             var thickness = LineThickness;
+
+            var direction = end - start;
+            direction.Normalize();
+
+            var perpendicular = new Vector3D(direction.Y, -direction.X, 0);
+            if (perpendicular.Length < 0.1)
+                perpendicular = new Vector3D(0, direction.Z, -direction.Y);
+            perpendicular.Normalize();
+            perpendicular *= thickness;
+
+            var positions = new Point3DCollection
+            {
+                start + perpendicular, start - perpendicular,
+                end + perpendicular, end - perpendicular
+            };
+
+            var triangleIndices = new Int32Collection { 0, 1, 2, 1, 3, 2 };
+
+            mesh.Positions = positions;
+            mesh.TriangleIndices = triangleIndices;
+
+            var material = new DiffuseMaterial(new SolidColorBrush(color));
+            var model = new GeometryModel3D(mesh, material);
+            model.BackMaterial = material;
+            return model;
+        }
+        private void RenderPoints()
+        {
+            pointsModelGroup.Children.Clear();
+
+            if (Points == null || Points.Count == 0)
+            {
+                pointsModelGroup.Children.Add(CreateSphere(new Point3D(0, 0, 0), 5, 0));
+                return;
+            }
+
+            if (Points.Count > 1)
+            {
+                for (int i = 0; i < Points.Count - 1; i++)
+                {
+                    var p1 = Points[i];
+                    var p2 = Points[i + 1];
+                    var start = new Point3D(p1.X, p1.Y, p1.Z);
+                    var end = new Point3D(p2.X, p2.Y, p2.Z);
+                    pointsModelGroup.Children.Add(CreateLine(start, end, Colors.Red));
+                }
+            }
+
+            double minX = Points.Min(p => p.X);
+            double maxX = Points.Max(p => p.X);
+            double minY = Points.Min(p => p.Y);
+            double maxY = Points.Max(p => p.Y);
+            double minZ = Points.Min(p => p.Z);
+            double maxZ = Points.Max(p => p.Z);
+
+            double centerX = (minX + maxX) / 2.0;
+            double centerY = (minY + maxY) / 2.0;
+            double centerZ = (minZ + maxZ) / 2.0;
+            double maxRange = Math.Max(maxX - minX, Math.Max(maxY - minY, maxZ - minZ));
+
+            _lookAtPoint = new Point3D(centerX, centerY, centerZ);
+            _cameraDistance = Math.Max(maxRange * 1.5, 100);
+            var cameraOffset = _cameraDistance / Math.Sqrt(3);
+            camera.Position = new Point3D(centerX + cameraOffset, centerY + cameraOffset, centerZ + cameraOffset);
+            camera.LookDirection = _lookAtPoint - camera.Position;
+
+            double sphereRadius = Math.Max(maxRange * 0.01, 1.0);
+            if (Points.Count > 100) sphereRadius *= 0.5;
+            else if (Points.Count > 50) sphereRadius *= 0.7;
+
+            LineThickness = 1.0;
+
+            foreach (var point in Points)
+            {
+                var center = new Point3D(point.X, point.Y, point.Z);
+                pointsModelGroup.Children.Add(CreateSphere(center, sphereRadius, point.RotZ));
+
+                double vectorLength = sphereRadius * (6.0 + 6.0 * point.RotZ);
+
+             
+                var rotatedDirection = new Vector3D(point.RotX, point.RotY, point.RotZ);
+
+                if (rotatedDirection.Length > 0.0001)
+                {
+                    rotatedDirection.Normalize();
+                    rotatedDirection *= vectorLength;
+                    var vectorColor = GetColorByTheta(point.RotZ);
+
+                    var vectorEnd = center + rotatedDirection;
+                    pointsModelGroup.Children.Add(CreateLine(center, vectorEnd, Colors.Blue, 4.0));
+                }
+            }
+        }
+
+
+
+        private GeometryModel3D CreateLine(Point3D start, Point3D end, Color color, double thickness)
+        {
+            var mesh = new MeshGeometry3D();
 
             var direction = end - start;
             direction.Normalize();
@@ -287,92 +343,8 @@ namespace CSVcorrectionTool.View
 
             var material = new DiffuseMaterial(new SolidColorBrush(color));
             var model = new GeometryModel3D(mesh, material);
-            // 반대 방향에서도 보이도록 BackMaterial도 지정
             model.BackMaterial = material;
             return model;
-        }
-
-
-        private void RenderPoints()
-        {
-
-            pointsModelGroup.Children.Clear();
-
-            if (Points == null || Points.Count == 0)
-            {
-                var testSphere = CreateSphere(new Point3D(0, 0, 0), 5);
-                pointsModelGroup.Children.Add(testSphere);
-                return;
-            }
-
-
-            if (Points.Count > 1)
-            {
-                for (int i = 0; i < Points.Count - 1; i++)
-                {
-                    var p1 = Points[i];
-                    var p2 = Points[i + 1];
-
-       
-                    var start = new Point3D(p1.X, p1.Y, p1.Z);
-                    var end = new Point3D(p2.X, p2.Y, p2.Z);
-                    var line = CreateLine(start, end, Colors.Red);
-
-                    pointsModelGroup.Children.Add(line);
-                }
-            }
-
-            double minX = Points.Min(p => p.X);
-            double maxX = Points.Max(p => p.X);
-            double minY = Points.Min(p => p.Y);
-            double maxY = Points.Max(p => p.Y);
-            double minZ = Points.Min(p => p.Z);
-            double maxZ = Points.Max(p => p.Z);
-
-            double centerX = (minX + maxX) / 2.0;
-            double centerY = (minY + maxY) / 2.0;
-            double centerZ = (minZ + maxZ) / 2.0;
-            double maxRange = Math.Max(maxX - minX, Math.Max(maxY - minY, maxZ - minZ));
-
- 
-            _lookAtPoint = new Point3D(centerX, centerY, centerZ);
-            _cameraDistance = Math.Max(maxRange * 1.5, 100);
-            var cameraOffset = _cameraDistance / Math.Sqrt(3);
-            camera.Position = new Point3D(centerX + cameraOffset, centerY + cameraOffset, centerZ + cameraOffset);
-            camera.LookDirection = _lookAtPoint - camera.Position;
-
-       
-            double sphereRadius = Math.Max(maxRange * 0.01, 1.0);
-            if (Points.Count > 100) sphereRadius *= 0.5;
-            else if (Points.Count > 50) sphereRadius *= 0.7;
-
-       
-
-            int addedCount = 0;
-            foreach (var point in Points)
-            {
-                var center = new Point3D(point.X, point.Y, point.Z);
-                var sphere = CreateSphere(center, sphereRadius);
-                pointsModelGroup.Children.Add(sphere);
-
-                double lineLength = sphereRadius * 3.5; 
-
-                var dirX = GetDirectionFromAngle(point.RotX, Axis.X, lineLength);
-                var lineX = CreateLine(center, center + dirX, Colors.Red);
-                pointsModelGroup.Children.Add(lineX);
-
-                var dirY = GetDirectionFromAngle(point.RotY, Axis.Y, lineLength);
-                var lineY = CreateLine(center, center + dirY, Colors.Green);
-                pointsModelGroup.Children.Add(lineY);
-
-                var dirZ = GetDirectionFromAngle(point.RotZ, Axis.Z, lineLength);
-                var lineZ = CreateLine(center, center + dirZ, Colors.Blue);
-                pointsModelGroup.Children.Add(lineZ);
-
-                addedCount++;
-            }
-
-
         }
 
         private enum Axis { X, Y, Z }
@@ -394,40 +366,43 @@ namespace CSVcorrectionTool.View
         }
 
 
+        private Color GetColorByTheta(double theta)
+        {
+            theta = Math.Max(0, Math.Min(1, theta));
+            byte r = (byte)(theta * 255);
+            byte b = (byte)((1 - theta) * 255);
+            return Color.FromRgb(r, 0, b);
+        }
 
-
-
-        private GeometryModel3D CreateSphere(Point3D center, double radius)
+        private GeometryModel3D CreateSphere(Point3D center, double radius, double theta)
         {
             var mesh = new MeshGeometry3D();
             var positions = new Point3DCollection();
             var triangleIndices = new Int32Collection();
 
-            int latSegments = 8;  // 위도 분할
-            int lonSegments = 12; // 경도 분할
+            int latSegments = 8;
+            int lonSegments = 12;
 
-            // 정점 생성
             for (int lat = 0; lat <= latSegments; lat++)
             {
-                double theta = lat * Math.PI / latSegments;
-                double sinTheta = Math.Sin(theta);
-                double cosTheta = Math.Cos(theta);
+                double phi = lat * Math.PI / latSegments;
+                double sinPhi = Math.Sin(phi);
+                double cosPhi = Math.Cos(phi);
 
                 for (int lon = 0; lon <= lonSegments; lon++)
                 {
-                    double phi = lon * 2 * Math.PI / lonSegments;
-                    double sinPhi = Math.Sin(phi);
-                    double cosPhi = Math.Cos(phi);
+                    double thetaLon = lon * 2 * Math.PI / lonSegments;
+                    double sinThetaLon = Math.Sin(thetaLon);
+                    double cosThetaLon = Math.Cos(thetaLon);
 
-                    double x = center.X + radius * sinTheta * cosPhi;
-                    double y = center.Y + radius * sinTheta * sinPhi;
-                    double z = center.Z + radius * cosTheta;
+                    double x = center.X + radius * sinPhi * cosThetaLon;
+                    double y = center.Y + radius * sinPhi * sinThetaLon;
+                    double z = center.Z + radius * cosPhi;
 
                     positions.Add(new Point3D(x, y, z));
                 }
             }
 
-            // 삼각형 인덱스 생성
             for (int lat = 0; lat < latSegments; lat++)
             {
                 for (int lon = 0; lon < lonSegments; lon++)
@@ -435,12 +410,10 @@ namespace CSVcorrectionTool.View
                     int current = lat * (lonSegments + 1) + lon;
                     int next = current + lonSegments + 1;
 
-                    // 첫 번째 삼각형
                     triangleIndices.Add(current);
                     triangleIndices.Add(next);
                     triangleIndices.Add(current + 1);
 
-                    // 두 번째 삼각형
                     triangleIndices.Add(current + 1);
                     triangleIndices.Add(next);
                     triangleIndices.Add(next + 1);
@@ -450,10 +423,7 @@ namespace CSVcorrectionTool.View
             mesh.Positions = positions;
             mesh.TriangleIndices = triangleIndices;
 
-            System.Windows.Media.Color sphereColor = Colors.Red;
-            if (center.X > 200) sphereColor = Colors.Blue;
-            else if (center.X < 50) sphereColor = Colors.Green;
-
+            var sphereColor = GetColorByTheta(theta);
             var material = new DiffuseMaterial(new SolidColorBrush(sphereColor));
             return new GeometryModel3D(mesh, material);
         }

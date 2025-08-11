@@ -36,7 +36,7 @@ namespace CSVcorrectionTool.ViewModels
         private readonly ICSVService _csvService;
 
         [ObservableProperty]
-        private CSVadjustmentModel _csvModel = new();    
+        private CSVadjustmentModel _csvModel = new();
 
         [ObservableProperty]
         private bool _isLoading;
@@ -45,86 +45,167 @@ namespace CSVcorrectionTool.ViewModels
         public MainViewModel(ICSVService csvService)
         {
             _csvService = csvService;
-       
-          
 
         }
 
         [RelayCommand]
-        private async Task ConventCommand()
+        private async Task ConvertAsync()
         {
-            if (Points == null || Points.Count < 3)
+            await Task.Run(() =>
             {
-                MessageBox.Show("포인트가 3개 이상 필요합니다.");
-                return;
-            }
+                if (Points.Count == 0) return;
 
-            MessageBox.Show("포인트 카운트 : " + Points.Count);
+                var segments = new List<List<CSVPointModel>>();
+                var currentSegment = new List<CSVPointModel>();
+                int currentCurveNumber = -1;
 
-            for (int i = 0; i < Points.Count; i++)
-            {
-                var point = Points[i];
-
-                Vector3D perpendicularDirection;
-
-                if (i == 0)
+                for (int i = 0; i < Points.Count; i++)
                 {
-                    if (Points.Count > 1)
+                    var point = Points[i];
+                    if (point.ExtraValues != null &&
+                        point.ExtraValues.Count >= 2 &&
+                        point.ExtraValues[0] == "Curve" &&
+                        int.TryParse(point.ExtraValues[1], out int curveNumber))
                     {
-                        var next = Points[1];
-                        perpendicularDirection = CalculatePerpendicularBisector(point, next);
+                        if (currentCurveNumber != curveNumber)
+                        {
+                            if (currentSegment.Count > 0)
+                            {
+                                segments.Add(currentSegment);
+                            }
+                            currentSegment = new List<CSVPointModel>();
+                            currentCurveNumber = curveNumber;
+                        }
                     }
-                    else
+                    currentSegment.Add(point);
+                }
+
+                if (currentSegment.Count > 0)
+                {
+                    segments.Add(currentSegment);
+                }
+
+                for (int segmentIndex = 0; segmentIndex < segments.Count; segmentIndex++)
+                {
+                    var segment = segments[segmentIndex];
+                    Console.WriteLine($"\n=== Processing Segment {segmentIndex} (Points: {segment.Count}) ===");
+
+                    for (int i = 0; i < segment.Count; i++)
                     {
-                        perpendicularDirection = new Vector3D(1, 0, 0); // 기본값
+                        int prevIndex = Math.Max(0, i - 1);
+                        int nextIndex = Math.Min(segment.Count - 1, i + 1);
+
+                        var prevPoint = segment[prevIndex];
+                        var currentPoint = segment[i];
+                        var nextPoint = segment[nextIndex];
+
+                        Vector3D directionVector = new Vector3D(
+                            nextPoint.X - prevPoint.X,
+                            nextPoint.Y - prevPoint.Y,
+                            nextPoint.Z - prevPoint.Z
+                        );
+
+                        double length = directionVector.Length;
+
+                        if (length > 0)
+                        {
+                            directionVector.Normalize();
+
+                            Matrix3D rotation = new Matrix3D();
+
+                            //dlfeks 
+                            rotation.Rotate(new Quaternion(new Vector3D(1, 0, 0), -90));
+                            directionVector = Vector3D.Multiply(directionVector, rotation);
+
+                            directionVector.Normalize();
+
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                currentPoint.RotX = directionVector.X;
+                                currentPoint.RotY = directionVector.Y;
+                                currentPoint.RotZ = directionVector.Z;
+
+                                Console.WriteLine($"Point {i} in Segment {segmentIndex}: ({directionVector.X:F5}, {directionVector.Y:F5}, {directionVector.Z:F5})");
+                                double theta = Math.Acos(directionVector.Z) * 180.0 / Math.PI;
+                                Console.WriteLine($"Slope angle = {theta:F2}°");
+                            });
+                        }
                     }
                 }
-                else if (i == Points.Count - 1)
+            });
+
+            MessageBox.Show("세그먼트별 방향 벡터 계산이 완료되었습니다.", "완료", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+
+        [RelayCommand]
+        private async Task SaveFileAsync()
+        {
+            if (!CsvModel.IsDataLoaded) return;
+
+            var saveFileDialog = new SaveFileDialog
+            {
+                Filter = "CSV 파일 (*.csv)|*.csv",
+                Title = "CSV 파일 저장"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                IsLoading = true;
+
+                var lines = new List<string>();
+
+                // 헤더 추가
+                if (CsvModel.Headers != null && CsvModel.Headers.Length > 0)
                 {
-                    var prev2 = Points[i - 2];
-                    var prev1 = Points[i - 1];
-                    perpendicularDirection = CalculatePerpendicularBisector(prev2, prev1);
+                    lines.Add(string.Join(",", CsvModel.Headers));
                 }
                 else
                 {
-                    var prev = Points[i - 1];
-                    var next = Points[i + 1];
-                    perpendicularDirection = CalculatePerpendicularBisector(prev, next);
+                    lines.Add("X,Y,Z,nx,ny,nz,Type,Value");
                 }
 
-                perpendicularDirection.Normalize();
+                // 데이터 추가
+                for (int pointIndex = 0; pointIndex < Points.Count; pointIndex++)
+                {
+                    var point = Points[pointIndex];
 
-                point.RotX = Math.Atan2(perpendicularDirection.Y, perpendicularDirection.Z) * 180.0 / Math.PI;
-                point.RotY = Math.Atan2(-perpendicularDirection.X, Math.Sqrt(perpendicularDirection.Y * perpendicularDirection.Y + perpendicularDirection.Z * perpendicularDirection.Z)) * 180.0 / Math.PI;
-                point.RotZ = Math.Atan2(perpendicularDirection.Y, perpendicularDirection.X) * 180.0 / Math.PI;
+                    // 방향 벡터 값을 직접 저장 (-1 ~ 1 범위의 값)
+                    var values = new List<string>
+            {
+                point.X.ToString("F5"),
+                point.Y.ToString("F5"),
+                point.Z.ToString("F5"),
+                point.RotX.ToString("F5"),  // nx
+                point.RotY.ToString("F5"),  // ny
+                point.RotZ.ToString("F5")   // nz
+            };
+
+                    // ExtraValues 처리
+                    if (point.ExtraValues != null && point.ExtraValues.Count > 0)
+                    {
+                        bool isFirstCurveZero = pointIndex > 0 &&
+                                              point.ExtraValues.Count == 2 &&
+                                              point.ExtraValues[0] == "Curve" &&
+                                              point.ExtraValues[1] == "0";
+
+                        if (!isFirstCurveZero)
+                        {
+                            values.AddRange(point.ExtraValues);
+                        }
+                    }
+
+                    lines.Add(string.Join(",", values));
+                }
+
+                await File.WriteAllLinesAsync(saveFileDialog.FileName, lines);
+
+                IsLoading = false;
+
+                MessageBox.Show($"CSV 파일이 성공적으로 저장되었습니다.\n파일 위치: {saveFileDialog.FileName}", "저장 완료", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
-        private Vector3D CalculatePerpendicularBisector(CSVPointModel p1, CSVPointModel p2)
-        {
-            double midX = (p1.X + p2.X) / 2.0;
-            double midY = (p1.Y + p2.Y) / 2.0;
-            double midZ = (p1.Z + p2.Z) / 2.0;
-
-            Vector3D lineDirection = new Vector3D(p2.X - p1.X, p2.Y - p1.Y, p2.Z - p1.Z);
-
-            Vector3D perpendicular;
-
-          
-            if (Math.Abs(lineDirection.Z) < 0.9) 
-            {
-                perpendicular = Vector3D.CrossProduct(lineDirection, new Vector3D(0, 0, 1));
-            }
-            else 
-            {
-                perpendicular = Vector3D.CrossProduct(lineDirection, new Vector3D(1, 0, 0));
-            }
-
-            
-            perpendicular.Normalize();
-
-            return perpendicular;
-        }
 
 
         [RelayCommand]
@@ -144,7 +225,7 @@ namespace CSVcorrectionTool.ViewModels
 
                 if (result.Success)
                 {
-                   
+
                     CsvModel.FilePath = openFileDialog.FileName;
                     CsvModel.CsvData.Clear();
                     foreach (var item in result.Data)
@@ -169,8 +250,6 @@ namespace CSVcorrectionTool.ViewModels
 
         private async Task LoadPointsFromCsvData()
         {
-            //AllocConsole();
-
             await Task.Run(() =>
             {
                 var points = new List<CSVPointModel>();
@@ -178,58 +257,69 @@ namespace CSVcorrectionTool.ViewModels
 
                 Console.WriteLine("=== CSV 포인트 데이터 로딩 시작 ===");
 
-                foreach (dynamic row in CsvModel.CsvData)
+                if (!string.IsNullOrEmpty(CsvModel.FilePath) && File.Exists(CsvModel.FilePath))
                 {
-                    try
+                    var lines = File.ReadAllLines(CsvModel.FilePath);
+
+                    int startIndex = 0;
+                    if (lines.Length > 0)
                     {
-                        var dict = row as IDictionary<string, object>;
-                        if (dict == null) continue;
-
-                        var values = dict.Values.Select(v => v?.ToString() ?? string.Empty).ToArray();
-
-                        if (values.Length < 6) continue;
-
-                        var point = new CSVPointModel();
-                        var extraValues = new List<string>();
-
-                        if (double.TryParse(values[0], out double x)) point.X = x;
-                        if (double.TryParse(values[1], out double y)) point.Y = y;
-                        if (double.TryParse(values[2], out double z)) point.Z = z;
-                        if (double.TryParse(values[3], out double rotX)) point.RotX = rotX;
-                        if (double.TryParse(values[4], out double rotY)) point.RotY = rotY;
-                        if (double.TryParse(values[5], out double rotZ)) point.RotZ = rotZ;
-
-                        for (int i = 6; i < values.Length; i++)
+                        var firstLineTokens = lines[0].Split(',');
+                        if (firstLineTokens.Length > 0 && !double.TryParse(firstLineTokens[0], out _))
                         {
-                            if (!string.IsNullOrWhiteSpace(values[i]))
+                            startIndex = 1; 
+                        }
+                    }
+
+                    for (int lineIndex = startIndex; lineIndex < lines.Length; lineIndex++)
+                    {
+                        var line = lines[lineIndex];
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+
+                        var tokens = line.Split(',');
+                        if (tokens.Length < 6) continue;
+
+                        try
+                        {
+                            var point = new CSVPointModel();
+                            var extraValues = new List<string>();
+
+                            if (double.TryParse(tokens[0], out double x)) point.X = x;
+                            if (double.TryParse(tokens[1], out double y)) point.Y = y;
+                            if (double.TryParse(tokens[2], out double z)) point.Z = z;
+                            if (double.TryParse(tokens[3], out double rotX)) point.RotX = rotX;
+                            if (double.TryParse(tokens[4], out double rotY)) point.RotY = rotY;
+                            if (double.TryParse(tokens[5], out double rotZ)) point.RotZ = rotZ;
+
+                            for (int i = 6; i < tokens.Length; i++)
                             {
-                                extraValues.Add(values[i]);
+                                extraValues.Add(tokens[i]);
+                            }
+
+                            point.ExtraValues = extraValues;
+                            points.Add(point);
+
+                            Console.WriteLine($"Point {pointIndex++}: X={point.X:F5}, Y={point.Y:F5}, Z={point.Z:F5}");
+                            if (point.ExtraValues.Count > 0)
+                            {
+                                Console.WriteLine($"         Extra: [{string.Join("], [", point.ExtraValues)}]");
                             }
                         }
-
-                        point.ExtraValues = extraValues;
-                        points.Add(point);
-
-                        Console.WriteLine($"Point {pointIndex++}: X={point.X:F5}, Y={point.Y:F5}, Z={point.Z:F5}");
-                        Console.WriteLine($"         Rotation: RotX={point.RotX:F5}, RotY={point.RotY:F5}, RotZ={point.RotZ:F5}");
-                        if (point.ExtraValues.Count > 0)
+                        catch (Exception ex)
                         {
-                            Console.WriteLine($"         Extra: {string.Join(", ", point.ExtraValues)}");
+                            Console.WriteLine($"라인 {lineIndex} 파싱 실패: {ex.Message}");
+                            continue;
                         }
-                        Console.WriteLine();
-
-                        System.Diagnostics.Debug.WriteLine($"Point {pointIndex - 1}: ({point.X:F5}, {point.Y:F5}, {point.Z:F5})");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"포인트 파싱 실패: {ex.Message}");
-                        System.Diagnostics.Debug.WriteLine($"포인트 파싱 실패: {ex.Message}");
-                        continue;
                     }
                 }
 
+                if (points.Count > 0)
+                {
+                    Console.WriteLine($"첫 번째 포인트 삭제: X={points[0].X:F5}, Y={points[0].Y:F5}, Z={points[0].Z:F5}");
+                    points.RemoveAt(0);
+                }
 
-                Console.WriteLine($"=== 총 {points.Count}개의 포인트 로딩 완료 ===");
+                Console.WriteLine($"=== 총 {points.Count}개의 포인트 로딩 완료 (첫 번째 라인 삭제됨) ===");
 
                 Application.Current.Dispatcher.Invoke(() =>
                 {
@@ -242,79 +332,15 @@ namespace CSVcorrectionTool.ViewModels
             });
         }
 
+
+
+
         [System.Runtime.InteropServices.DllImport("kernel32.dll")]
         private static extern bool AllocConsole();
 
-        [RelayCommand]
-  
-        private async Task SaveFileAsync()
-        {
-            if (!CsvModel.IsDataLoaded) return;
-
-            var saveFileDialog = new SaveFileDialog
-            {
-                Filter = "CSV 파일 (*.csv)|*.csv",
-                Title = "CSV 파일 저장"
-            };
-
-            if (saveFileDialog.ShowDialog() == true)
-            {
-                IsLoading = true;
-
-                var lines = new List<string>();
-                for (int pointIndex = 0; pointIndex < Points.Count; pointIndex++)
-                {
-                    var point = Points[pointIndex];
-                    var values = new List<string>
-            {
-                point.X.ToString("F5"),
-                point.Y.ToString("F5"),
-                point.Z.ToString("F5"),
-                point.RotX.ToString("F5"),
-                point.RotY.ToString("F5"),
-                point.RotZ.ToString("F5")
-            };
-
-                    // 첫 번째 라인은 항상 "Curve,0"
-                    if (pointIndex == 0)
-                    {
-                        values.Add("Curve");
-                        values.Add("0");
-                    }
-                    else
-                    {
-                        // 나머지 라인은 기존 ExtraValues 처리
-                        if (point.ExtraValues != null && point.ExtraValues.Count > 0)
-                        {
-                            foreach (var val in point.ExtraValues)
-                            {
-                                if (int.TryParse(val, out int number))
-                                {
-                                    values.Add("Curve");
-                                    values.Add(val);
-                                }
-                                else
-                                {
-                                    values.Add(val);
-                                }
-                            }
-                        }
-                    }
-
-                    lines.Add(string.Join(",", values));
-                }
-
-                await File.WriteAllLinesAsync(saveFileDialog.FileName, lines);
-
-                IsLoading = false;
-            }
-        }
-
-
-
-
+        
+       
 
 
     }
-
 }

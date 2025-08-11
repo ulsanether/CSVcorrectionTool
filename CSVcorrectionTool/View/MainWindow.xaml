@@ -134,8 +134,9 @@
                 Margin="0,120,0,0"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Top"
-                Command="{Binding ConventCommandCommand}"
+                Command="{Binding ConvertCommand}"
                 Content="보정하기" />
+
         </Grid>
         <Grid
             x:Name="view3D"
