@@ -79,6 +79,7 @@ namespace CSVcorrectionTool.View
             InitializeComponent();
             InitializeMouseControls();
             CreateAxis();
+         
         }
 
         private void InitializeMouseControls()
@@ -154,6 +155,7 @@ namespace CSVcorrectionTool.View
 
         #endregion
 
+        #region 카메라 관련
         private void RotateCamera(double deltaTheta, double deltaPhi)
         {
             if (camera == null) return;
@@ -209,11 +211,19 @@ namespace CSVcorrectionTool.View
             camera.Position = _lookAtPoint - direction * _cameraDistance;
         }
 
+        #endregion
+
+        #region 모델링 생성 관련
+
         private void CreateAxis()
         {
-            axisModelGroup.Children.Add(CreateLine(new Point3D(0, 0, 0), new Point3D(50, 0, 0), Colors.Red));   // X축 (빨강)
-            axisModelGroup.Children.Add(CreateLine(new Point3D(0, 0, 0), new Point3D(0, 50, 0), Colors.Green)); // Y축 (초록)
-            axisModelGroup.Children.Add(CreateLine(new Point3D(0, 0, 0), new Point3D(0, 0, 50), Colors.Blue));  // Z축 (파랑)
+
+            axisModelGroup.Children.Add(CreateLine(new Point3D(0, 0, 0), new Point3D(50, 0, 0), Colors.Red));
+            axisModelGroup.Children.Add(CreateLine(new Point3D(0, 0, 0), new Point3D(0, 50, 0), Colors.Green));
+            axisModelGroup.Children.Add(CreateLine(new Point3D(0, 0, 0), new Point3D(0, 0, 50), Colors.Blue));
+
+
+
         }
 
 
@@ -300,7 +310,7 @@ namespace CSVcorrectionTool.View
 
                 double vectorLength = sphereRadius * (6.0 + 6.0 * point.RotZ);
 
-             
+
                 var rotatedDirection = new Vector3D(point.RotX, point.RotY, point.RotZ);
 
                 if (rotatedDirection.Length > 0.0001)
@@ -310,11 +320,10 @@ namespace CSVcorrectionTool.View
                     var vectorColor = GetColorByTheta(point.RotZ);
 
                     var vectorEnd = center + rotatedDirection;
-                    pointsModelGroup.Children.Add(CreateLine(center, vectorEnd, Colors.Blue, 4.0));
+                    pointsModelGroup.Children.Add(CreateLine(center, vectorEnd, Colors.Blue, 1.0));
                 }
             }
         }
-
 
 
         private GeometryModel3D CreateLine(Point3D start, Point3D end, Color color, double thickness)
@@ -346,25 +355,6 @@ namespace CSVcorrectionTool.View
             model.BackMaterial = material;
             return model;
         }
-
-        private enum Axis { X, Y, Z }
-
-        private Vector3D GetDirectionFromAngle(double angleDegree, Axis axis, double length)
-        {
-            double angleRad = angleDegree * Math.PI / 180.0;
-            switch (axis)
-            {
-                case Axis.X:
-                    return new Vector3D(length * Math.Cos(angleRad), length * Math.Sin(angleRad), 0);
-                case Axis.Y:
-                    return new Vector3D(0, length * Math.Cos(angleRad), length * Math.Sin(angleRad));
-                case Axis.Z:
-                    return new Vector3D(length * Math.Sin(angleRad), 0, length * Math.Cos(angleRad));
-                default:
-                    return new Vector3D(length, 0, 0);
-            }
-        }
-
 
         private Color GetColorByTheta(double theta)
         {
@@ -426,6 +416,7 @@ namespace CSVcorrectionTool.View
             var sphereColor = GetColorByTheta(theta);
             var material = new DiffuseMaterial(new SolidColorBrush(sphereColor));
             return new GeometryModel3D(mesh, material);
-        }
+        } 
+        #endregion
     }
 }

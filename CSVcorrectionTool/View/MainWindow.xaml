@@ -36,9 +36,9 @@
             <Button
                 Width="60"
                 Height="30"
-                Margin="0,40,0,0"
+                Margin="0,0,0,304"
                 HorizontalAlignment="Center"
-                VerticalAlignment="Top"
+                VerticalAlignment="Bottom"
                 Command="{Binding OpenFileCommand}"
                 Content="파일열기" />
 
@@ -64,7 +64,7 @@
                 Margin="0,180,0,0"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                Command="{Binding ConvertCommand}"
+                Command="{Binding SettingCommand}"
                 Content="설정" />
 
         </Grid>
@@ -95,10 +95,11 @@
                 HorizontalAlignment="Right"
                 Background="#FF4C4C4C">
                 <Label
+                    x:Name="stateLabel"
                     Padding="0,0,0,0"
                     HorizontalAlignment="Center"
                     HorizontalContentAlignment="Right"
-                    Content="대기 상태"
+                    Content="{Binding StateText}"
                     FontSize="10" />
             </StatusBar>
         </Grid>
@@ -114,6 +115,7 @@
                 Margin="10,0,0,0"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Center"
+                Command="{Binding TestCheckCommand}"
                 IsEnabled="{Binding DataContext.ControlsEnabled, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}"
                 Style="{StaticResource MaterialDesignFloatingActionMiniLightButton}"
                 ToolTip="MaterialDesignFloatingActionMiniLightButton">
@@ -128,6 +130,7 @@
                 Margin="50,0,0,0"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Center"
+                Command="{Binding TestCheckCommand}"
                 IsEnabled="{Binding DataContext.ControlsEnabled, RelativeSource={RelativeSource AncestorType={x:Type Window}, Mode=FindAncestor}}"
                 Style="{StaticResource MaterialDesignFloatingActionMiniLightButton}"
                 ToolTip="MaterialDesignFloatingActionMiniLightButton">
@@ -164,6 +167,7 @@
                 Margin="90,0,0,0"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Center"
+                Command="{Binding TestCheckCommand}"
                 IsEnabled="{Binding DataContext.ControlsEnabled, RelativeSource={RelativeSource AncestorType={x:Type Window}, Mode=FindAncestor}}"
                 Style="{StaticResource MaterialDesignFloatingActionMiniLightButton}"
                 ToolTip="MaterialDesignFloatingActionMiniLightButton">
@@ -181,6 +185,7 @@
                 materialDesign:ButtonProgressAssist.IsIndeterminate="True"
                 materialDesign:ButtonProgressAssist.IsIndicatorVisible="True"
                 materialDesign:ButtonProgressAssist.Value="-1"
+                Command="{Binding TestCheckCommand}"
                 Content="{materialDesign:PackIcon DotsHorizontal}"
                 IsEnabled="{Binding DataContext.ControlsEnabled, RelativeSource={RelativeSource AncestorType={x:Type Window}, Mode=FindAncestor}}"
                 Style="{StaticResource MaterialDesignFloatingActionButton}" />

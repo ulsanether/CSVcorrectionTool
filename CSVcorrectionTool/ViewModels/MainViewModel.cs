@@ -22,16 +22,11 @@ namespace CSVcorrectionTool.ViewModels
         [ObservableProperty]
         private double _lineThickness = 0.5;
 
+        [ObservableProperty]
+        private string _stateText = string.Empty;
 
         [ObservableProperty]
         private double xDegree = 90;
-
-        [ObservableProperty]
-        private double yDegree = 90;
-
-        [ObservableProperty]
-        private double zDegree = 90;
-
 
         private readonly ICSVService _csvService;
 
@@ -41,16 +36,16 @@ namespace CSVcorrectionTool.ViewModels
         [ObservableProperty]
         private bool _isLoading;
 
-
         public MainViewModel(ICSVService csvService)
         {
             _csvService = csvService;
-
+            StateText = "준비 상태";
         }
 
         [RelayCommand]
         private async Task ConvertAsync()
         {
+            StateText = "보정작업 중";
             await Task.Run(() =>
             {
                 if (Points.Count == 0) return;
@@ -85,6 +80,7 @@ namespace CSVcorrectionTool.ViewModels
                     segments.Add(currentSegment);
                 }
 
+                // 진행 방향(탄젠트)만 계산하여 RotX/Y/Z에 저장
                 for (int segmentIndex = 0; segmentIndex < segments.Count; segmentIndex++)
                 {
                     var segment = segments[segmentIndex];
@@ -105,38 +101,20 @@ namespace CSVcorrectionTool.ViewModels
                             nextPoint.Z - prevPoint.Z
                         );
 
-                        double length = directionVector.Length;
+                        directionVector.Normalize();
 
-                        if (length > 0)
+                        Application.Current.Dispatcher.Invoke(() =>
                         {
-                            directionVector.Normalize();
-
-                            Matrix3D rotation = new Matrix3D();
-
-                            //dlfeks 
-                            rotation.Rotate(new Quaternion(new Vector3D(1, 0, 0), -90));
-                            directionVector = Vector3D.Multiply(directionVector, rotation);
-
-                            directionVector.Normalize();
-
-                            Application.Current.Dispatcher.Invoke(() =>
-                            {
-                                currentPoint.RotX = directionVector.X;
-                                currentPoint.RotY = directionVector.Y;
-                                currentPoint.RotZ = directionVector.Z;
-
-                                Console.WriteLine($"Point {i} in Segment {segmentIndex}: ({directionVector.X:F5}, {directionVector.Y:F5}, {directionVector.Z:F5})");
-                                double theta = Math.Acos(directionVector.Z) * 180.0 / Math.PI;
-                                Console.WriteLine($"Slope angle = {theta:F2}°");
-                            });
-                        }
+                            currentPoint.RotX = directionVector.X;
+                            currentPoint.RotY = directionVector.Y;
+                            currentPoint.RotZ = directionVector.Z;
+                        });
                     }
                 }
+
+                StateText = "방향 벡터 보정 완료";
             });
-
-            MessageBox.Show("세그먼트별 방향 벡터 계산이 완료되었습니다.", "완료", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-
 
         [RelayCommand]
         private async Task SaveFileAsync()
@@ -155,7 +133,6 @@ namespace CSVcorrectionTool.ViewModels
 
                 var lines = new List<string>();
 
-                // 헤더 추가
                 if (CsvModel.Headers != null && CsvModel.Headers.Length > 0)
                 {
                     lines.Add(string.Join(",", CsvModel.Headers));
@@ -165,29 +142,26 @@ namespace CSVcorrectionTool.ViewModels
                     lines.Add("X,Y,Z,nx,ny,nz,Type,Value");
                 }
 
-                // 데이터 추가
                 for (int pointIndex = 0; pointIndex < Points.Count; pointIndex++)
                 {
                     var point = Points[pointIndex];
 
-                    // 방향 벡터 값을 직접 저장 (-1 ~ 1 범위의 값)
                     var values = new List<string>
-            {
-                point.X.ToString("F5"),
-                point.Y.ToString("F5"),
-                point.Z.ToString("F5"),
-                point.RotX.ToString("F5"),  // nx
-                point.RotY.ToString("F5"),  // ny
-                point.RotZ.ToString("F5")   // nz
-            };
+                    {
+                        point.X.ToString("F5"),
+                        point.Y.ToString("F5"),
+                        point.Z.ToString("F5"),
+                        point.RotX.ToString("F5"),  // nx
+                        point.RotY.ToString("F5"),  // ny
+                        point.RotZ.ToString("F5")   // nz
+                    };
 
-                    // ExtraValues 처리
                     if (point.ExtraValues != null && point.ExtraValues.Count > 0)
                     {
                         bool isFirstCurveZero = pointIndex > 0 &&
-                                              point.ExtraValues.Count == 2 &&
-                                              point.ExtraValues[0] == "Curve" &&
-                                              point.ExtraValues[1] == "0";
+                                                point.ExtraValues.Count == 2 &&
+                                                point.ExtraValues[0] == "Curve" &&
+                                                point.ExtraValues[1] == "0";
 
                         if (!isFirstCurveZero)
                         {
@@ -201,16 +175,41 @@ namespace CSVcorrectionTool.ViewModels
                 await File.WriteAllLinesAsync(saveFileDialog.FileName, lines);
 
                 IsLoading = false;
-
+                StateText = "파일이 저장되었습니다.";
                 MessageBox.Show($"CSV 파일이 성공적으로 저장되었습니다.\n파일 위치: {saveFileDialog.FileName}", "저장 완료", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
+        [RelayCommand]
+        private async Task SettingAsync()
+        {
+            StateText = "설정아직 준비 안됨";
+            //var settingWindow = new SettingWindow
+            //{
+            //    Owner = Application.Current.MainWindow
+            //};
+            //if (settingWindow.ShowDialog() == true)
+            //{
+            //    // 설정이 변경되었을 때 필요한 작업을 여기에 추가할 수 있습니다.
+            //    StateText = "설정이 저장되었습니다.";
+            //}
+            //else
+            //{
+            //    StateText = "설정창이 닫혔습니다.";
+            //}
+        }
 
+        [RelayCommand]
+        private async Task TestCheckAsync()
+        {
+            MessageBox.Show("테스트 메시지입니다.", "테스트", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
 
         [RelayCommand]
         private async Task OpenFileAsync()
         {
+            StateText = "CSV 파일을 불러오는 중...";
+
             var openFileDialog = new OpenFileDialog
             {
                 Filter = "CSV 파일 (*.csv)|*.csv|모든 파일 (*.*)|*.*",
@@ -225,7 +224,6 @@ namespace CSVcorrectionTool.ViewModels
 
                 if (result.Success)
                 {
-
                     CsvModel.FilePath = openFileDialog.FileName;
                     CsvModel.CsvData.Clear();
                     foreach (var item in result.Data)
@@ -267,7 +265,7 @@ namespace CSVcorrectionTool.ViewModels
                         var firstLineTokens = lines[0].Split(',');
                         if (firstLineTokens.Length > 0 && !double.TryParse(firstLineTokens[0], out _))
                         {
-                            startIndex = 1; 
+                            startIndex = 1;
                         }
                     }
 
@@ -332,15 +330,7 @@ namespace CSVcorrectionTool.ViewModels
             });
         }
 
-
-
-
         [System.Runtime.InteropServices.DllImport("kernel32.dll")]
         private static extern bool AllocConsole();
-
-        
-       
-
-
     }
 }

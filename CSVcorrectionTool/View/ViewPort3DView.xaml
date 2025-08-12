@@ -11,17 +11,17 @@
 
     <Grid>
         <Viewport3D x:Name="viewport" ClipToBounds="True">
-            <!-- 카메라 설정 -->
+            <!--  카메라 설정  -->
             <Viewport3D.Camera>
                 <PerspectiveCamera
                     x:Name="camera"
                     FieldOfView="45"
-                    Position="100,100,100"
                     LookDirection="-1,-1,-1"
+                    Position="100,100,110"
                     UpDirection="0,0,1" />
             </Viewport3D.Camera>
 
-            <!-- 조명 설정 -->
+            <!--  조명 설정  -->
             <ModelVisual3D>
                 <ModelVisual3D.Content>
                     <Model3DGroup>
@@ -32,14 +32,14 @@
                 </ModelVisual3D.Content>
             </ModelVisual3D>
 
-            <!-- 좌표축 표시 -->
+            <!--  좌표축 표시  -->
             <ModelVisual3D>
                 <ModelVisual3D.Content>
                     <Model3DGroup x:Name="axisModelGroup" />
                 </ModelVisual3D.Content>
             </ModelVisual3D>
 
-            <!-- 포인트 및 벡터 표시 -->
+            <!--  포인트 및 벡터 표시  -->
             <ModelVisual3D>
                 <ModelVisual3D.Content>
                     <Model3DGroup x:Name="pointsModelGroup" />

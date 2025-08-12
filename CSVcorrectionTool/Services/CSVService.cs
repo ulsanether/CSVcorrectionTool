@@ -24,34 +24,42 @@ namespace CSVcorrectionTool.Services
 
         public List<CSVPointModel> LoadPointsFromCsv(string filePath)
         {
-            var points = new List<CSVPointModel>();
+            var lines = File.ReadLines(filePath).ToList();
+            var points = new List<CSVPointModel>(lines.Count);
 
-            foreach (var line in File.ReadLines(filePath))
-            {
-                var tokens = line.Split(',');
-                if (tokens.Length < 6) continue;
-                if (double.TryParse(tokens[0], out double x) &&
-                    double.TryParse(tokens[1], out double y) &&
-                    double.TryParse(tokens[2], out double z) &&
-                    double.TryParse(tokens[3], out double rotX) &&
-                    double.TryParse(tokens[4], out double rotY) &&
-                    double.TryParse(tokens[5], out double rotZ))
+            // 병렬 처리
+            var result = lines.AsParallel()
+                .Select(line =>
                 {
-                    var extra = tokens.Skip(6).ToList();
-                    points.Add(new CSVPointModel
+                    var tokens = line.Split(',');
+                    if (tokens.Length < 6) return null;
+                    if (double.TryParse(tokens[0], out double x) &&
+                        double.TryParse(tokens[1], out double y) &&
+                        double.TryParse(tokens[2], out double z) &&
+                        double.TryParse(tokens[3], out double rotX) &&
+                        double.TryParse(tokens[4], out double rotY) &&
+                        double.TryParse(tokens[5], out double rotZ))
                     {
-                        X = x,
-                        Y = y,
-                        Z = z,
-                        RotX = rotX,
-                        RotY = rotY,
-                        RotZ = rotZ,
-                        ExtraValues = extra
-                    });
-                }
-            }
-            return points;
+                        var extra = tokens.Skip(6).ToList();
+                        return new CSVPointModel
+                        {
+                            X = x,
+                            Y = y,
+                            Z = z,
+                            RotX = rotX,
+                            RotY = rotY,
+                            RotZ = rotZ,
+                            ExtraValues = extra
+                        };
+                    }
+                    return null;
+                })
+                .Where(p => p != null)
+                .ToList();
+
+            return result;
         }
+
 
         public async Task<(bool Success, List<dynamic> Data, string[] Headers, string ErrorMessage)> LoadCsvFileAsync(string filePath)
         {
